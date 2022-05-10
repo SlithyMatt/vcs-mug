@@ -1,0 +1,682 @@
+ca65 V2.19 - Git 52e438792
+Main file   : mug.asm
+Current file: mug.asm
+
+000000r 1               .include "atari2600.inc"
+000000r 2               ; Atari 2600 TIA & RIOT read / write registers
+000000r 2               ;
+000000r 2               ; Florent Flament (contact@florentflament.com), 2017
+000000r 2               
+000000r 2               ; TIA & RIOT registers mapping
+000000r 2               .include "atari2600_tia.inc"
+000000r 3               ; Atari 2600 TIA read / write registers
+000000r 3               ;
+000000r 3               ; Source: DASM - vcs.h
+000000r 3               ; Details available in: Stella Programmer's Guide by Steve Wright
+000000r 3               ;
+000000r 3               ; Florent Flament (contact@florentflament.com), 2017
+000000r 3               
+000000r 3               ; Read registers
+000000r 3               VSYNC  := $00
+000000r 3               VBLANK := $01
+000000r 3               WSYNC  := $02
+000000r 3               RSYNC  := $03
+000000r 3               NUSIZ0 := $04
+000000r 3               NUSIZ1 := $05
+000000r 3               COLUP0 := $06
+000000r 3               COLUP1 := $07
+000000r 3               COLUPF := $08
+000000r 3               COLUBK := $09
+000000r 3               CTRLPF := $0A
+000000r 3               REFP0  := $0B
+000000r 3               REFP1  := $0C
+000000r 3               PF0    := $0D
+000000r 3               PF1    := $0E
+000000r 3               PF2    := $0F
+000000r 3               RESP0  := $10
+000000r 3               RESP1  := $11
+000000r 3               RESM0  := $12
+000000r 3               RESM1  := $13
+000000r 3               RESBL  := $14
+000000r 3               AUDC0  := $15
+000000r 3               AUDC1  := $16
+000000r 3               AUDF0  := $17
+000000r 3               AUDF1  := $18
+000000r 3               AUDV0  := $19
+000000r 3               AUDV1  := $1A
+000000r 3               GRP0   := $1B
+000000r 3               GRP1   := $1C
+000000r 3               ENAM0  := $1D
+000000r 3               ENAM1  := $1E
+000000r 3               ENABL  := $1F
+000000r 3               HMP0   := $20
+000000r 3               HMP1   := $21
+000000r 3               HMM0   := $22
+000000r 3               HMM1   := $23
+000000r 3               HMBL   := $24
+000000r 3               VDELP0 := $25
+000000r 3               VDELP1 := $26
+000000r 3               VDELBL := $27
+000000r 3               RESMP0 := $28
+000000r 3               RESMP1 := $29
+000000r 3               HMOVE  := $2A
+000000r 3               HMCLR  := $2B
+000000r 3               CXCLR  := $2C
+000000r 3               
+000000r 3               ; Write registers
+000000r 3               CXM0P  := $00
+000000r 3               CXM1P  := $01
+000000r 3               CXP0FB := $02
+000000r 3               CXP1FB := $03
+000000r 3               CXM0FB := $04
+000000r 3               CXM1FB := $05
+000000r 3               CXBLPF := $06
+000000r 3               CXPPMM := $07
+000000r 3               INPT0  := $08
+000000r 3               INPT1  := $09
+000000r 3               INPT2  := $0A
+000000r 3               INPT3  := $0B
+000000r 3               INPT4  := $0C
+000000r 3               INPT5  := $0D
+000000r 3               
+000000r 2               .include "atari2600_riot.inc"
+000000r 3               ; Atari 2600 RIOT read / write registers
+000000r 3               ;
+000000r 3               ; Source: DASM - vcs.h
+000000r 3               ; Details available in: Stella Programmer's Guide by Steve Wright
+000000r 3               ;
+000000r 3               ; Florent Flament (contact@florentflament.com), 2017
+000000r 3               
+000000r 3               ; Read registers
+000000r 3               SWCHA  := $0280
+000000r 3               SWACNT := $0281
+000000r 3               SWCHB  := $0282
+000000r 3               SWBCNT := $0283
+000000r 3               INTIM  := $0284
+000000r 3               TIMINT := $0285
+000000r 3               
+000000r 3               ; Write registers
+000000r 3               TIM1T  := $0294
+000000r 3               TIM8T  := $0295
+000000r 3               TIM64T := $0296
+000000r 3               T1024T := $0297
+000000r 3               
+000000r 2               
+000000r 1               
+000000r 1               ; RAM Variables
+000000r 1               FRAME_COUNT = $80
+000000r 1               LINE_NUM   = $81
+000000r 1               FILL_COLOR = $82
+000000r 1               
+000000r 1               ; Constants
+000000r 1               
+000000r 1               .org $1000
+001000  1               .segment "STARTUP"
+001000  1               
+001000  1               Reset:
+001000  1  A2 00           ldx #0
+001002  1  A9 00           lda #0
+001004  1               Clear:
+001004  1  95 00           sta 0,x
+001006  1  E8              inx
+001007  1  D0 FB           bne Clear
+001009  1               
+001009  1                  ; Initialize graphics
+001009  1  A9 00           lda #0
+00100B  1  85 09           sta COLUBK
+00100D  1               
+00100D  1  A9 3C           lda #60
+00100F  1  85 81           sta LINE_NUM
+001011  1               
+001011  1               StartOfFrame:
+001011  1               
+001011  1               ; Start of vertical blank processing
+001011  1  A9 00           lda #0
+001013  1  85 01           sta VBLANK
+001015  1               
+001015  1  A9 02           lda #2
+001017  1  85 00           sta VSYNC
+001019  1               
+001019  1               ; 3 scanlines of VSYNCH signal...
+001019  1  85 02           sta WSYNC
+00101B  1               
+00101B  1  A2 F0           ldx #$F0
+00101D  1  86 0F           stx PF2     ; playfield2 = center foreground
+00101F  1               
+00101F  1  A2 00           ldx #0
+001021  1  86 09           stx COLUBK  ; background = black
+001023  1  86 08           stx COLUPF  ; playfield = black
+001025  1               
+001025  1  E8              inx
+001026  1  86 0A           stx CTRLPF  ; mirror playfield
+001028  1               
+001028  1               
+001028  1               
+001028  1  85 02           sta WSYNC
+00102A  1               
+00102A  1  A9 9E           lda #$9E    ; players = light blue
+00102C  1  85 06           sta COLUP0
+00102E  1  85 07           sta COLUP1
+001030  1               
+001030  1  A9 07           lda #7   ; players = quad size
+001032  1  85 04           sta NUSIZ0
+001034  1  85 05           sta NUSIZ1
+001036  1               
+001036  1  85 02           sta WSYNC
+001038  1               
+001038  1               
+001038  1  A9 00           lda #0
+00103A  1  85 00           sta VSYNC
+00103C  1               
+00103C  1               ; 37 scanlines of vertical blank...
+00103C  1               
+00103C  1  A2 24           ldx #36
+00103E  1               @vblank_loop:
+00103E  1  85 02           sta WSYNC
+001040  1  CA              dex
+001041  1  D0 FB           bne @vblank_loop
+001043  1               
+001043  1  85 02           sta WSYNC
+001045  1  A2 04           ldx #4
+001047  1               @p0_hpos_loop:
+001047  1  EA              nop
+001048  1  CA              dex
+001049  1  D0 FC           bne @p0_hpos_loop
+00104B  1  EA              nop
+00104C  1  EA              nop
+00104D  1  85 10           sta RESP0 ; set player 0 horizontal position (left side of mug)
+00104F  1  EA              nop
+001050  1  EA              nop
+001051  1  85 11           sta RESP1 ; set player 1 horizontal position (right side of mug)
+001053  1               
+001053  1               
+001053  1               ; 192 scanlines of picture...
+001053  1               Picture:
+001053  1  A2 19           ldx #25
+001055  1               @top_margin:
+001055  1  85 02           sta WSYNC
+001057  1  CA              dex
+001058  1  D0 FB           bne @top_margin
+00105A  1               
+00105A  1               @fill_loop:
+00105A  1  85 02           sta WSYNC
+00105C  1  BD 87 11        lda p0_shape,x
+00105F  1  85 1B           sta GRP0
+001061  1  BD C7 11        lda p1_shape,x
+001064  1  85 1C           sta GRP1
+001066  1  8A              txa
+001067  1  C5 81           cmp LINE_NUM
+001069  1  30 13           bmi @next_fill
+00106B  1  C9 3C           cmp #60
+00106D  1  10 0B           bpl @black_fill
+00106F  1  4A              lsr
+001070  1  4A              lsr
+001071  1  A8              tay
+001072  1  B9 78 11        lda fill_colors,y
+001075  1  85 08           sta COLUPF
+001077  1  4C 7E 10        jmp @next_fill
+00107A  1               @black_fill:
+00107A  1  A9 00           lda #0
+00107C  1  85 08           sta COLUPF
+00107E  1               @next_fill:
+00107E  1  E8              inx
+00107F  1  E0 40           cpx #64
+001081  1  D0 D7           bne @fill_loop
+001083  1               
+001083  1  A2 00           ldx #0
+001085  1  85 02           sta WSYNC
+001087  1  86 1B           stx GRP0    ; player 0 sprite = clear
+001089  1  86 1C           stx GRP1    ; player 1 sprite = clear
+00108B  1  86 0A           stx CTRLPF  ; normal playfield
+00108D  1  86 0F           stx PF2     ; Playfield2 = clear
+00108F  1               
+00108F  1  85 02           sta WSYNC
+001091  1  A9 1E           lda #$1E
+001093  1  85 08           sta COLUPF  ; Playfield = yellow
+001095  1  85 02           sta WSYNC
+001097  1  85 02           sta WSYNC
+001099  1  85 02           sta WSYNC
+00109B  1  85 02           sta WSYNC
+00109D  1               
+00109D  1  E8              inx
+00109E  1  E4 81           cpx LINE_NUM
+0010A0  1  F0 05           beq @print_title
+0010A2  1  A2 61           ldx #97
+0010A4  1  4C 53 11        jmp @bottom_margin
+0010A7  1               
+0010A7  1               @print_title:
+0010A7  1  A2 00           ldx #0
+0010A9  1  A0 00           ldy #0
+0010AB  1               @title_loop:
+0010AB  1  85 02 84 0D  .repeat 2
+0010AF  1  BD 07 12 85  
+0010B3  1  0E BD 29 12  
+0010F1  1                  sta WSYNC
+0010F1  1                  sty PF0
+0010F1  1                  lda title_pf1_left,x
+0010F1  1                  sta PF1
+0010F1  1                  lda title_pf2,x
+0010F1  1                  sta PF2
+0010F1  1                  lda title_pf0,x
+0010F1  1                  nop
+0010F1  1                  nop
+0010F1  1                  nop
+0010F1  1                  nop
+0010F1  1                  nop
+0010F1  1                  nop
+0010F1  1                  nop
+0010F1  1                  sta PF0
+0010F1  1                  lda title_pf1_right,x
+0010F1  1                  nop
+0010F1  1                  sta PF1
+0010F1  1                  nop
+0010F1  1                  sty PF2
+0010F1  1               .endrepeat
+0010F1  1  E8              inx
+0010F2  1  E0 22           cpx #34
+0010F4  1  D0 B5           bne @title_loop
+0010F6  1  84 0D           sty PF0
+0010F8  1  84 0E           sty PF1
+0010FA  1               
+0010FA  1  85 02           sta WSYNC
+0010FC  1  85 02           sta WSYNC
+0010FE  1  85 02           sta WSYNC
+001100  1               
+001100  1                  ; print 2600 in rainbow
+001100  1  A2 00           ldx #0
+001102  1               @number_loop:
+001102  1  85 02 84 0D  .repeat 2
+001106  1  84 0E BD 8F  
+00110A  1  12 85 0F BD  
+001148  1                  sta WSYNC
+001148  1                  sty PF0
+001148  1                  sty PF1
+001148  1                  lda num_pf2,x
+001148  1                  sta PF2
+001148  1                  lda fill_colors,x
+001148  1                  sta COLUPF
+001148  1                  lda num_pf0,x
+001148  1                  nop
+001148  1                  nop
+001148  1                  nop
+001148  1                  nop
+001148  1                  nop
+001148  1                  sta PF0
+001148  1                  lda num_pf1,x
+001148  1                  nop
+001148  1                  sta PF1
+001148  1                  nop
+001148  1                  sty PF2
+001148  1               .endrepeat
+001148  1  E8              inx
+001149  1  E0 0C           cpx #12
+00114B  1  D0 B5           bne @number_loop
+00114D  1  84 0D           sty PF0
+00114F  1  84 0E           sty PF1
+001151  1               
+001151  1               
+001151  1  A2 02           ldx #2
+001153  1               @bottom_margin:
+001153  1  85 02           sta WSYNC
+001155  1  CA              dex
+001156  1  D0 FB           bne @bottom_margin
+001158  1               
+001158  1  A9 42           lda #%01000010
+00115A  1  85 01           sta VBLANK                     ; end of screen - enter blanking
+00115C  1               
+00115C  1               
+00115C  1                  ; 30 scanlines of overscan...
+00115C  1               Overscan:
+00115C  1               
+00115C  1  85 02           sta WSYNC
+00115E  1  E6 80           inc FRAME_COUNT
+001160  1  A5 80           lda FRAME_COUNT
+001162  1  29 04           and #$04
+001164  1  C9 04           cmp #$04
+001166  1  D0 06           bne @next_frame
+001168  1  C6 81           dec LINE_NUM
+00116A  1  D0 02           bne @next_frame
+00116C  1  E6 81           inc LINE_NUM
+00116E  1               
+00116E  1               
+00116E  1               
+00116E  1               @next_frame:
+00116E  1  A2 1D           ldx #29
+001170  1               @oscan_loop:
+001170  1  85 02           sta WSYNC
+001172  1  CA              dex
+001173  1  D0 FB           bne @oscan_loop
+001175  1  4C 11 10        jmp StartOfFrame
+001178  1               
+001178  1               ; Pattern Data
+001178  1               fill_colors:
+001178  1  44 36 2E FE  .byte $44,$36,$2E,$FE,$1E,$EE,$DC,$CA,$B8,$A6,$96,$86,$78,$6A,$5C
+00117C  1  1E EE DC CA  
+001180  1  B8 A6 96 86  
+001187  1               
+001187  1               p0_shape:
+001187  1  08           .byte %00001000
+001188  1  08           .byte %00001000
+001189  1  08           .byte %00001000
+00118A  1  08           .byte %00001000
+00118B  1  08           .byte %00001000
+00118C  1  08           .byte %00001000
+00118D  1  08           .byte %00001000
+00118E  1  08           .byte %00001000
+00118F  1  08           .byte %00001000
+001190  1  08           .byte %00001000
+001191  1  08           .byte %00001000
+001192  1  88           .byte %10001000
+001193  1  98           .byte %10011000
+001194  1  F8           .byte %11111000
+001195  1  F8           .byte %11111000
+001196  1  F8           .byte %11111000
+001197  1  E8           .byte %11101000
+001198  1  C8           .byte %11001000
+001199  1  C8           .byte %11001000
+00119A  1  88           .byte %10001000
+00119B  1  88           .byte %10001000
+00119C  1  88           .byte %10001000
+00119D  1  88           .byte %10001000
+00119E  1  88           .byte %10001000
+00119F  1  88           .byte %10001000
+0011A0  1  88           .byte %10001000
+0011A1  1  88           .byte %10001000
+0011A2  1  88           .byte %10001000
+0011A3  1  88           .byte %10001000
+0011A4  1  88           .byte %10001000
+0011A5  1  88           .byte %10001000
+0011A6  1  88           .byte %10001000
+0011A7  1  88           .byte %10001000
+0011A8  1  88           .byte %10001000
+0011A9  1  88           .byte %10001000
+0011AA  1  88           .byte %10001000
+0011AB  1  88           .byte %10001000
+0011AC  1  88           .byte %10001000
+0011AD  1  88           .byte %10001000
+0011AE  1  88           .byte %10001000
+0011AF  1  88           .byte %10001000
+0011B0  1  C8           .byte %11001000
+0011B1  1  C8           .byte %11001000
+0011B2  1  C8           .byte %11001000
+0011B3  1  E8           .byte %11101000
+0011B4  1  78           .byte %01111000
+0011B5  1  78           .byte %01111000
+0011B6  1  38           .byte %00111000
+0011B7  1  18           .byte %00011000
+0011B8  1  08           .byte %00001000
+0011B9  1  08           .byte %00001000
+0011BA  1  08           .byte %00001000
+0011BB  1  08           .byte %00001000
+0011BC  1  08           .byte %00001000
+0011BD  1  08           .byte %00001000
+0011BE  1  08           .byte %00001000
+0011BF  1  08           .byte %00001000
+0011C0  1  08           .byte %00001000
+0011C1  1  08           .byte %00001000
+0011C2  1  0C           .byte %00001100
+0011C3  1  0F           .byte %00001111
+0011C4  1  0F           .byte %00001111
+0011C5  1  0F           .byte %00001111
+0011C6  1  07           .byte %00000111
+0011C7  1               
+0011C7  1               p1_shape:
+0011C7  1  01           .byte %00000001
+0011C8  1  01           .byte %00000001
+0011C9  1  01           .byte %00000001
+0011CA  1  01           .byte %00000001
+0011CB  1  01           .byte %00000001
+0011CC  1  01           .byte %00000001
+0011CD  1  01           .byte %00000001
+0011CE  1  01           .byte %00000001
+0011CF  1  01           .byte %00000001
+0011D0  1  01           .byte %00000001
+0011D1  1  01           .byte %00000001
+0011D2  1  01           .byte %00000001
+0011D3  1  01           .byte %00000001
+0011D4  1  01           .byte %00000001
+0011D5  1  01           .byte %00000001
+0011D6  1  01           .byte %00000001
+0011D7  1  01           .byte %00000001
+0011D8  1  01           .byte %00000001
+0011D9  1  01           .byte %00000001
+0011DA  1  01           .byte %00000001
+0011DB  1  01           .byte %00000001
+0011DC  1  01           .byte %00000001
+0011DD  1  01           .byte %00000001
+0011DE  1  01           .byte %00000001
+0011DF  1  01           .byte %00000001
+0011E0  1  01           .byte %00000001
+0011E1  1  01           .byte %00000001
+0011E2  1  01           .byte %00000001
+0011E3  1  01           .byte %00000001
+0011E4  1  01           .byte %00000001
+0011E5  1  01           .byte %00000001
+0011E6  1  01           .byte %00000001
+0011E7  1  01           .byte %00000001
+0011E8  1  01           .byte %00000001
+0011E9  1  01           .byte %00000001
+0011EA  1  01           .byte %00000001
+0011EB  1  01           .byte %00000001
+0011EC  1  01           .byte %00000001
+0011ED  1  01           .byte %00000001
+0011EE  1  01           .byte %00000001
+0011EF  1  01           .byte %00000001
+0011F0  1  01           .byte %00000001
+0011F1  1  01           .byte %00000001
+0011F2  1  01           .byte %00000001
+0011F3  1  01           .byte %00000001
+0011F4  1  01           .byte %00000001
+0011F5  1  01           .byte %00000001
+0011F6  1  01           .byte %00000001
+0011F7  1  01           .byte %00000001
+0011F8  1  01           .byte %00000001
+0011F9  1  01           .byte %00000001
+0011FA  1  01           .byte %00000001
+0011FB  1  01           .byte %00000001
+0011FC  1  01           .byte %00000001
+0011FD  1  01           .byte %00000001
+0011FE  1  01           .byte %00000001
+0011FF  1  01           .byte %00000001
+001200  1  01           .byte %00000001
+001201  1  01           .byte %00000001
+001202  1  03           .byte %00000011
+001203  1  FF           .byte %11111111
+001204  1  FF           .byte %11111111
+001205  1  FF           .byte %11111111
+001206  1  FE           .byte %11111110
+001207  1               
+001207  1               title_pf1_left:
+001207  1  03           .byte %00000011
+001208  1  03           .byte %00000011
+001209  1  02           .byte %00000010
+00120A  1  02           .byte %00000010
+00120B  1  03           .byte %00000011
+00120C  1  03           .byte %00000011
+00120D  1  03           .byte %00000011
+00120E  1  02           .byte %00000010
+00120F  1  02           .byte %00000010
+001210  1  02           .byte %00000010
+001211  1  00           .byte %00000000
+001212  1  00           .byte %00000000
+001213  1  01           .byte %00000001
+001214  1  01           .byte %00000001
+001215  1  01           .byte %00000001
+001216  1  01           .byte %00000001
+001217  1  01           .byte %00000001
+001218  1  01           .byte %00000001
+001219  1  01           .byte %00000001
+00121A  1  01           .byte %00000001
+00121B  1  01           .byte %00000001
+00121C  1  01           .byte %00000001
+00121D  1  00           .byte %00000000
+00121E  1  00           .byte %00000000
+00121F  1  05           .byte %00000101
+001220  1  05           .byte %00000101
+001221  1  05           .byte %00000101
+001222  1  05           .byte %00000101
+001223  1  07           .byte %00000111
+001224  1  07           .byte %00000111
+001225  1  05           .byte %00000101
+001226  1  05           .byte %00000101
+001227  1  05           .byte %00000101
+001228  1  05           .byte %00000101
+001229  1               
+001229  1               title_pf2:
+001229  1  DC           .byte %11011100
+00122A  1  DD           .byte %11011101
+00122B  1  85           .byte %10000101
+00122C  1  85           .byte %10000101
+00122D  1  8D           .byte %10001101
+00122E  1  8C           .byte %10001100
+00122F  1  85           .byte %10000101
+001230  1  85           .byte %10000101
+001231  1  9D           .byte %10011101
+001232  1  9D           .byte %10011101
+001233  1  00           .byte %00000000
+001234  1  00           .byte %00000000
+001235  1  99           .byte %10011001
+001236  1  BB           .byte %10111011
+001237  1  AA           .byte %10101010
+001238  1  AB           .byte %10101011
+001239  1  B9           .byte %10111001
+00123A  1  9B           .byte %10011011
+00123B  1  BA           .byte %10111010
+00123C  1  AA           .byte %10101010
+00123D  1  AB           .byte %10101011
+00123E  1  A9           .byte %10101001
+00123F  1  00           .byte %00000000
+001240  1  00           .byte %00000000
+001241  1  4C           .byte %01001100
+001242  1  5E           .byte %01011110
+001243  1  52           .byte %01010010
+001244  1  52           .byte %01010010
+001245  1  52           .byte %01010010
+001246  1  52           .byte %01010010
+001247  1  52           .byte %01010010
+001248  1  52           .byte %01010010
+001249  1  DE           .byte %11011110
+00124A  1  8C           .byte %10001100
+00124B  1               
+00124B  1               title_pf0:
+00124B  1  D0           .byte %11010000
+00124C  1  D0           .byte %11010000
+00124D  1  40           .byte %01000000
+00124E  1  40           .byte %01000000
+00124F  1  C0           .byte %11000000
+001250  1  C0           .byte %11000000
+001251  1  C0           .byte %11000000
+001252  1  40           .byte %01000000
+001253  1  40           .byte %01000000
+001254  1  40           .byte %01000000
+001255  1  00           .byte %00000000
+001256  1  00           .byte %00000000
+001257  1  B0           .byte %10110000
+001258  1  B0           .byte %10110000
+001259  1  80           .byte %10000000
+00125A  1  80           .byte %10000000
+00125B  1  90           .byte %10010000
+00125C  1  90           .byte %10010000
+00125D  1  80           .byte %10000000
+00125E  1  00           .byte %00000000
+00125F  1  30           .byte %00110000
+001260  1  30           .byte %00110000
+001261  1  00           .byte %00000000
+001262  1  00           .byte %00000000
+001263  1  20           .byte %00100000
+001264  1  A0           .byte %10100000
+001265  1  A0           .byte %10100000
+001266  1  A0           .byte %10100000
+001267  1  A0           .byte %10100000
+001268  1  20           .byte %00100000
+001269  1  20           .byte %00100000
+00126A  1  20           .byte %00100000
+00126B  1  B0           .byte %10110000
+00126C  1  90           .byte %10010000
+00126D  1               
+00126D  1               title_pf1_right:
+00126D  1  18           .byte %00011000
+00126E  1  BC           .byte %10111100
+00126F  1  A4           .byte %10100100
+001270  1  A4           .byte %10100100
+001271  1  A4           .byte %10100100
+001272  1  24           .byte %00100100
+001273  1  A4           .byte %10100100
+001274  1  A4           .byte %10100100
+001275  1  BC           .byte %10111100
+001276  1  98           .byte %10011000
+001277  1  00           .byte %00000000
+001278  1  00           .byte %00000000
+001279  1  10           .byte %00010000
+00127A  1  10           .byte %00010000
+00127B  1  10           .byte %00010000
+00127C  1  50           .byte %01010000
+00127D  1  50           .byte %01010000
+00127E  1  F0           .byte %11110000
+00127F  1  F0           .byte %11110000
+001280  1  A0           .byte %10100000
+001281  1  A0           .byte %10100000
+001282  1  A0           .byte %10100000
+001283  1  00           .byte %00000000
+001284  1  00           .byte %00000000
+001285  1  EE           .byte %11101110
+001286  1  EE           .byte %11101110
+001287  1  08           .byte %00001000
+001288  1  08           .byte %00001000
+001289  1  CC           .byte %11001100
+00128A  1  EC           .byte %11101100
+00128B  1  28           .byte %00101000
+00128C  1  28           .byte %00101000
+00128D  1  EE           .byte %11101110
+00128E  1  CE           .byte %11001110
+00128F  1               
+00128F  1               num_pf2:
+00128F  1  C6           .byte %11000110
+001290  1  EF           .byte %11101111
+001291  1  29           .byte %00101001
+001292  1  29           .byte %00101001
+001293  1  2C           .byte %00101100
+001294  1  EC           .byte %11101100
+001295  1  E6           .byte %11100110
+001296  1  22           .byte %00100010
+001297  1  23           .byte %00100011
+001298  1  2F           .byte %00101111
+001299  1  EF           .byte %11101111
+00129A  1  CF           .byte %11001111
+00129B  1               
+00129B  1               num_pf0:
+00129B  1  80           .byte %10000000
+00129C  1  D0           .byte %11010000
+00129D  1  50           .byte %01010000
+00129E  1  40           .byte %01000000
+00129F  1  40           .byte %01000000
+0012A0  1  40           .byte %01000000
+0012A1  1  50           .byte %01010000
+0012A2  1  50           .byte %01010000
+0012A3  1  50           .byte %01010000
+0012A4  1  50           .byte %01010000
+0012A5  1  D0           .byte %11010000
+0012A6  1  80           .byte %10000000
+0012A7  1               
+0012A7  1               num_pf1:
+0012A7  1  8C           .byte %10001100
+0012A8  1  DE           .byte %11011110
+0012A9  1  52           .byte %01010010
+0012AA  1  52           .byte %01010010
+0012AB  1  52           .byte %01010010
+0012AC  1  52           .byte %01010010
+0012AD  1  52           .byte %01010010
+0012AE  1  52           .byte %01010010
+0012AF  1  52           .byte %01010010
+0012B0  1  52           .byte %01010010
+0012B1  1  DE           .byte %11011110
+0012B2  1  8C           .byte %10001100
+0012B3  1               
+0012B3  1               
+0012B3  1               .org $1FFA
+001FFA  1               .segment "VECTORS"
+001FFA  1               
+001FFA  1  00 10        .word Reset          ; NMI
+001FFC  1  00 10        .word Reset          ; RESET
+001FFE  1  00 10        .word Reset          ; IRQ
+001FFE  1               

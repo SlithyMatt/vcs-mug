@@ -97,9 +97,9 @@ Picture:
 
 @fill_loop:
    sta WSYNC
-   lda p0_shape,x
+   lda p0_mug_shape,x
    sta GRP0
-   lda p1_shape,x
+   lda p1_mug_shape,x
    sta GRP1
    txa
    cmp LINE_NUM
@@ -245,7 +245,148 @@ Overscan:
 fill_colors:
 .byte $44,$36,$2E,$FE,$1E,$EE,$DC,$CA,$B8,$A6,$96,$86,$78,$6A,$5C
 
-p0_shape:
+p0_tove:
+.byte %00000000
+.byte %00000000
+.byte %00000000
+.byte %00000000
+.byte %00000000
+.byte %00000000
+.byte %00000000
+.byte %00000001
+.byte %00000011
+.byte %00001111
+.byte %00001111
+.byte %00001111
+.byte %00001111
+.byte %00011111
+.byte %00111111
+.byte %01111111
+.byte %11011111
+.byte %00011111
+.byte %00001111
+.byte %00001111
+.byte %00000111
+.byte %00000000
+.byte %00000000
+.byte %00000000
+.byte %00000001
+
+p0_tove_color:
+.byte $F6,$F6,$F6,$F6,$F6,$F6,$F6,$F6,$F4,$F4,$F0,$F6,$F6
+.byte $26,$F0,$F0,$F0,$F6,$F8,$FC,$E4,$F4,$F4,$F4,$F4
+
+p1_tove:
+.byte %00000001
+.byte %00000011
+.byte %00001110
+.byte %00001000
+.byte %00111000
+.byte %01100000
+.byte %01100000
+.byte %11000000
+.byte %10000000
+.byte %10000000
+.byte %00000000
+.byte %00000000
+.byte %00000011
+.byte %10000010
+.byte %10000110
+.byte %10001100
+.byte %10001000
+.byte %10001100
+.byte %11000100
+.byte %11111100
+.byte %11111000
+.byte %01110000
+.byte %01100000
+.byte %01100000
+.byte %11000000
+
+p1_tove_color:
+.byte $0A,$0A,$0A,$F8,$F8,$F8,$F8,$F6,$F6,$F6,$0A,$0A,$0A
+.byte $0A,$04,$04,$04,$F0,$F2,$E4,$E4,$F0,$F0,$E4,$E4
+
+intro_pf0_left:
+.repeat 36
+.byte %00000000
+.endrepeat
+.byte %11000000
+.byte %01000000
+.byte %01000000
+.byte %11000000
+.byte %01000000
+.byte %01000000
+.byte %01000000
+
+intro_pf1_left:
+.byte %00000000
+.byte %00000001
+.byte %00000000
+.byte %00000000
+.byte %00000000
+.byte %00000100
+.byte %00001110
+.byte %00001010
+.byte %00001000
+.byte %00001100
+.byte %00000110
+.byte %00000010
+.byte %00001010
+.byte %00001110
+.byte %00000100
+.byte %00000000
+.byte %00000000
+.byte %00000000
+.byte %00000000
+.byte %00000000
+.byte %00110000
+.byte %01111001
+.byte %11001001
+.byte %10000001
+.byte %10000011
+.byte %10111010
+.byte %10111010
+.byte %10001011
+.byte %10001011
+.byte %11001010
+.byte %01111010
+.byte %00110010
+.byte %00000000
+.byte %00000000
+.byte %00000000
+.byte %00000000
+.byte %00110011
+.byte %10101010
+.byte %10101010
+.byte %00110011
+.byte %00101010
+.byte %00101010
+.byte %00101011
+
+intro_pf2_left:
+.byte %00010001
+.byte %10010001
+.byte %10010101
+.byte %10010101
+.byte %10110001
+.byte %10110101
+.byte %10010101
+.byte %10010101
+.byte %10010101
+.byte %10010101
+.byte %10010101
+.byte %10010101
+.byte %10110101
+.byte %10100101
+.byte %00000000
+.byte %00000000
+.byte %00000000
+.byte %00000000
+.byte %00000000
+
+
+p0_mug_shape:
 .byte %00001000
 .byte %00001000
 .byte %00001000
@@ -311,7 +452,7 @@ p0_shape:
 .byte %00001111
 .byte %00000111
 
-p1_shape:
+p1_mug_shape:
 .byte %00000001
 .byte %00000001
 .byte %00000001
